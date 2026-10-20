@@ -18,15 +18,12 @@ export default function RegisterScreen({ switchToLogin }) {
     try {
       const data = await registerRequest(username, email, password);
 
-      if (data.message || data.user) {
-        Alert.alert('Успех', 'Регистрация прошла успешно! Теперь войдите в аккаунт.', [
-          { text: 'OK', onPress: switchToLogin }
-        ]);
-      } else {
-        Alert.alert('Ошибка регистрации', data.error || 'Не удалось зарегистрироваться');
-      }
+      Alert.alert('Успех', 'Регистрация прошла успешно! Теперь войдите в аккаунт.', [
+        { text: 'OK', onPress: switchToLogin }
+      ]);
     } catch (error) {
-      Alert.alert('Ошибка сети', 'Не удалось связаться с сервером');
+      // Покажет конкретную ошибку от Rails API или детали сетевого сбоя
+      Alert.alert('Ошибка регистрации', error.message || 'Не удалось связаться с сервером');
     } finally {
       setLoading(false);
     }
