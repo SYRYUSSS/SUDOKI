@@ -1,75 +1,75 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert } from 'react-native';
-import { loginRequest, saveTokens } from '../services/api';
+import { saveAccessToken } from '../services/api';
+
+const API_URL = 'http://192.168.31.177:3000';
 
 export default function LoginScreen({ onLoginSuccess, switchToRegister }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Ошибка', 'Заполните все поля');
-      return;
-    }
-
-    setLoading(true);
     try {
-      const data = await loginRequest(email, password);
+      const response = await fetch(`${API_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await response.json();
 
-      if (data.access_token) {
-        await saveTokens(data.access_token, data.refresh_token);
+      if (response.ok) {
+        await saveAccessToken(data.token);
         onLoginSuccess();
       } else {
-        Alert.alert('Ошибка входа', data.error || 'Неверный логин или пароль');
+        Alert.alert('Ошибка', data.error || 'Неверный email или пароль');
       }
     } catch (error) {
-      Alert.alert('Ошибка сети', 'Не удалось связаться с сервером');
-    } finally {
-      setLoading(false);
+      Alert.alert('Ошибка', 'Не удалось подключиться к серверу');
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>SUDOKU</Text>
-      <Text style={styles.subtitle}>Вход в аккаунт</Text>
+      <View style={styles.card}>
+        <Text style={styles.title}>Вход в Судоку</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-      />
+        <TextInput
+          style={styles.input}
+          placeholder="Email"
+          placeholderTextColor="#adb5bd"
+          autoCapitalize="none"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+        />
 
-      <TextInput
-        style={styles.input}
-        placeholder="Пароль"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
+        <TextInput
+          style={styles.input}
+          placeholder="Пароль"
+          placeholderTextColor="#adb5bd"
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
 
-      <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
-        <Text style={styles.buttonText}>{loading ? 'Вход...' : 'Войти'}</Text>
-      </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={handleLogin}>
+          <Text style={styles.buttonText}>Войти</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity onPress={switchToRegister} style={styles.linkButton}>
-        <Text style={styles.linkText}>Нет аккаунта? Зарегистрироваться</Text>
-      </TouchableOpacity>
+        <TouchableOpacity onPress={switchToRegister}>
+          <Text style={styles.switchText}>Нет аккаунта? Зарегистрироваться</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 24, backgroundColor: '#f8f9fa' },
-  title: { fontSize: 36, fontWeight: 'bold', textAlign: 'center', color: '#212529', letterSpacing: 2 },
-  subtitle: { fontSize: 18, textAlign: 'center', color: '#6c757d', marginBottom: 32, marginTop: 8 },
-  input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ced4da', borderRadius: 8, padding: 14, fontSize: 16, marginBottom: 16 },
-  button: { backgroundColor: '#0d6efd', padding: 16, borderRadius: 8, alignItems: 'center', marginTop: 8 },
-  buttonText: { color: '#fff', fontSize: 18, fontWeight: '600' },
-  linkButton: { marginTop: 20, alignItems: 'center' },
-  linkText: { color: '#0d6efd', fontSize: 15 },
+  container: { flex: 1, backgroundColor: '#f8f9fa', justifyContent: 'center', alignItems: 'center' },
+  card: { width: '85%', backgroundColor: '#fff', padding: 24, borderRadius: 16, elevation: 3, alignItems: 'center' },
+  title: { fontSize: 24, fontWeight: 'bold', color: '#212529', marginBottom: 20 },
+  input: { width: '100%', height: 50, backgroundColor: '#f8f9fa', borderWidth: 1, borderColor: '#dee2e6', borderRadius: 10, paddingHorizontal: 16, fontSize: 16, marginBottom: 12 },
+  button: { width: '100%', height: 50, backgroundColor: '#0d6efd', justifyContent: 'center', alignItems: 'center', borderRadius: 10, marginTop: 8 },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  switchText: { color: '#0d6efd', marginTop: 16, fontSize: 14 }
 });

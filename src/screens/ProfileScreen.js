@@ -1,12 +1,50 @@
-import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
-import { logout } from '../services/api';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { removeAccessToken, getAccessToken } from '../services/api';
 
-export default function ProfileScreen({ onLogout, username = 'Player1', email = 'player1@example.com' }) {
+const API_URL = 'http://192.168.31.177:3000';
+
+export default function ProfileScreen({ onLogout }) {
+  const [profileData, setProfileData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      const token = await getAccessToken();
+      const response = await fetch(`${API_URL}/profile`, {
+        headers: { 'Authorization': token }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setProfileData(data);
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки профиля:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogout = async () => {
-    await logout();
+    await removeAccessToken();
     onLogout();
   };
+
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#0d6efd" />
+      </View>
+    );
+  }
+
+  const username = profileData?.username || 'Игрок';
+  const email = profileData?.email || '';
+  const stats = profileData?.stats || { total_games: 0, wins: 0, best_time: '--:--' };
 
   return (
     <View style={styles.container}>
@@ -22,18 +60,18 @@ export default function ProfileScreen({ onLogout, username = 'Player1', email = 
       </View>
 
       <View style={styles.statsCard}>
-        <Text style={styles.statsTitle}>Статистика (Заглушка)</Text>
+        <Text style={styles.statsTitle}>Статистика игр</Text>
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
-            <Text style={styles.statNumber}>12</Text>
+            <Text style={styles.statNumber}>{stats.total_games}</Text>
             <Text style={styles.statLabel}>Игр сыграно</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={styles.statNumber}>8</Text>
+            <Text style={styles.statNumber}>{stats.wins}</Text>
             <Text style={styles.statLabel}>Побед</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={styles.statNumber}>04:15</Text>
+            <Text style={styles.statNumber}>{stats.best_time}</Text>
             <Text style={styles.statLabel}>Лучшее время</Text>
           </View>
         </View>
@@ -48,7 +86,8 @@ export default function ProfileScreen({ onLogout, username = 'Player1', email = 
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: '#f8f9fa', justifyContent: 'center' },
-  card: { backgroundColor: '#fff', borderRadius: 16, padding: 24, alignItems: 'center', elevation: 3, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8, marginBottom: 20 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  card: { backgroundColor: '#fff', borderRadius: 16, padding: 24, alignItems: 'center', elevation: 3, marginBottom: 20 },
   avatar: { width: 70, height: 70, borderRadius: 35, backgroundColor: '#0d6efd', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
   avatarText: { color: '#fff', fontSize: 28, fontWeight: 'bold' },
   username: { fontSize: 22, fontWeight: 'bold', color: '#212529' },

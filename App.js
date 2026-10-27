@@ -53,7 +53,6 @@ export default function App() {
         )}
       </View>
 
-      {/* Простая навигационная панель снизу (Bottom Navigation) */}
       <View style={styles.navbar}>
         <TouchableOpacity
           style={[styles.navButton, activeTab === 'game' && styles.navActive]}

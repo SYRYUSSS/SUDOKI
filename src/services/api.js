@@ -1,72 +1,28 @@
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = 'http://192.168.31.177:3000';
+const TOKEN_KEY = 'auth_token';
 
-// Сохранение токенов в памяти телефона
-export const saveTokens = async (accessToken, refreshToken) => {
-  await SecureStore.setItemAsync('access_token', accessToken);
-  await SecureStore.setItemAsync('refresh_token', refreshToken);
-};
-
-export const getAccessToken = async () => {
-  return await SecureStore.getItemAsync('access_token');
-};
-
-export const getRefreshToken = async () => {
-  return await SecureStore.getItemAsync('refresh_token');
-};
-
-export const logout = async () => {
-  await SecureStore.deleteItemAsync('access_token');
-  await SecureStore.deleteItemAsync('refresh_token');
-};
-
-// Запрос на вход
-export const loginRequest = async (email, password) => {
+export const saveAccessToken = async (token) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || 'Неверный email или пароль');
-    }
-
-    return data;
+    await AsyncStorage.setItem(TOKEN_KEY, String(token));
   } catch (error) {
-    console.error('Login Error:', error);
-    throw error;
+    console.error('Ошибка сохранения токена:', error);
   }
 };
 
-// Запрос на регистрацию (исправлена обёртка user)
-export const registerRequest = async (username, email, password) => {
+export const getAccessToken = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/signup`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        user: {
-          username,
-          email,
-          password,
-        },
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || 'Ошибка при регистрации');
-    }
-
-    return data;
+    return await AsyncStorage.getItem(TOKEN_KEY);
   } catch (error) {
-    console.error('Register Error:', error);
-    throw error;
+    console.error('Ошибка чтения токена:', error);
+    return null;
+  }
+};
+
+export const removeAccessToken = async () => {
+  try {
+    await AsyncStorage.removeItem(TOKEN_KEY);
+  } catch (error) {
+    console.error('Ошибка удаления токена:', error);
   }
 };
