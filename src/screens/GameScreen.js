@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, Dimensions } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView } from 'react-native';
 
-const { width } = Dimensions.get('window');
-const BOARD_SIZE = width - 32;
-const CELL_SIZE = BOARD_SIZE / 9;
-
+// Заглушка стартовой доски Sudoku (0 - пустая ячейка)
 const INITIAL_BOARD = [
   [5, 3, 0, 0, 7, 0, 0, 0, 0],
   [6, 0, 0, 1, 9, 5, 0, 0, 0],
@@ -17,79 +14,66 @@ const INITIAL_BOARD = [
   [0, 0, 0, 0, 8, 0, 0, 7, 9],
 ];
 
-export default function GameScreen({ onLogout }) {
+export default function GameScreen() {
   const [board, setBoard] = useState(INITIAL_BOARD);
-  const [selectedCell, setSelectedCell] = useState(null);
+  const [selectedCell, setSelectedCell] = useState(null); // { row, col }
 
-  const isValid = (board, row, col, value) => {
-    if (value === 0) return true;
-    for (let i = 0; i < 9; i++) {
-      if (i !== col && board[row][i] === value) return false;
-      if (i !== row && board[i][col] === value) return false;
-    }
-    const startRow = Math.floor(row / 3) * 3;
-    const startCol = Math.floor(col / 3) * 3;
-    for (let r = startRow; r < startRow + 3; r++) {
-      for (let c = startCol; c < startCol + 3; c++) {
-        if ((r !== row || c !== col) && board[r][c] === value) return false;
-      }
-    }
-    return true;
+  const handleCellPress = (row, col) => {
+    setSelectedCell({ row, col });
   };
 
-  const handleNumberPress = (num) => {
+  const handleNumberInput = (num) => {
     if (!selectedCell) return;
     const { row, col } = selectedCell;
+    
+    // Не даем менять исходные фиксированные цифры (где в INITIAL_BOARD != 0)
     if (INITIAL_BOARD[row][col] !== 0) return;
 
     const newBoard = board.map((r, rIdx) =>
-      r.map((val, cIdx) => (rIdx === row && cIdx === col ? num : val))
+      r.map((c, cIdx) => (rIdx === row && cIdx === col ? num : c))
     );
     setBoard(newBoard);
   };
 
-  const selectedValue = selectedCell ? board[selectedCell.row][selectedCell.col] : null;
-
   return (
     <SafeAreaView style={styles.container}>
+      {/* Шапка игры */}
       <View style={styles.header}>
-        <Text style={styles.title}>SUDOKU</Text>
-        <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
-          <Text style={styles.logoutText}>Выйти</Text>
-        </TouchableOpacity>
+        <View style={styles.infoBox}>
+          <Text style={styles.infoLabel}>Сложность</Text>
+          <Text style={styles.infoValue}>Средняя</Text>
+        </View>
+        <View style={styles.infoBox}>
+          <Text style={styles.infoLabel}>Время</Text>
+          <Text style={styles.infoValue}>02:45</Text>
+        </View>
+        <View style={styles.infoBox}>
+          <Text style={styles.infoLabel}>Ошибки</Text>
+          <Text style={styles.infoValue}>1/3</Text>
+        </View>
       </View>
 
+      {/* Игровое поле 9x9 */}
       <View style={styles.board}>
         {board.map((row, rIdx) => (
-          <View key={`row-${rIdx}`} style={styles.row}>
-            {row.map((value, cIdx) => {
+          <View key={rIdx} style={styles.row}>
+            {row.map((cell, cIdx) => {
               const isSelected = selectedCell?.row === rIdx && selectedCell?.col === cIdx;
               const isInitial = INITIAL_BOARD[rIdx][cIdx] !== 0;
-              const isSameValue = selectedValue && value === selectedValue && value !== 0;
-              const isSameRowOrCol = selectedCell && (selectedCell.row === rIdx || selectedCell.col === cIdx);
-              const isInvalid = !isValid(board, rIdx, cIdx, value);
 
               return (
                 <TouchableOpacity
-                  key={`cell-${rIdx}-${cIdx}`}
+                  key={cIdx}
                   style={[
                     styles.cell,
-                    isSameRowOrCol && styles.highlightedRowCol,
-                    isSameValue && styles.sameValueCell,
-                    isSelected && styles.selectedCell,
-                    isInvalid && styles.invalidCell,
-                    rIdx % 3 === 2 && rIdx !== 8 && styles.borderBottom,
                     cIdx % 3 === 2 && cIdx !== 8 && styles.borderRight,
+                    rIdx % 3 === 2 && rIdx !== 8 && styles.borderBottom,
+                    isSelected && styles.selectedCell,
                   ]}
-                  activeOpacity={0.7}
-                  onPress={() => setSelectedCell({ row: rIdx, col: cIdx })}
+                  onPress={() => handleCellPress(rIdx, cIdx)}
                 >
-                  <Text style={[
-                    styles.cellText, 
-                    isInitial && styles.initialText,
-                    isInvalid && styles.invalidText
-                  ]}>
-                    {value !== 0 ? value : ''}
+                  <Text style={[styles.cellText, isInitial ? styles.initialText : styles.userText]}>
+                    {cell !== 0 ? cell : ''}
                   </Text>
                 </TouchableOpacity>
               );
@@ -98,18 +82,15 @@ export default function GameScreen({ onLogout }) {
         ))}
       </View>
 
-      <View style={styles.keypad}>
+      {/* Цифровая клавиатура */}
+      <View style={styles.numpad}>
         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-          <TouchableOpacity
-            key={`key-${num}`}
-            style={styles.key}
-            onPress={() => handleNumberPress(num)}
-          >
-            <Text style={styles.keyText}>{num}</Text>
+          <TouchableOpacity key={num} style={styles.numButton} onPress={() => handleNumberInput(num)}>
+            <Text style={styles.numButtonText}>{num}</Text>
           </TouchableOpacity>
         ))}
-        <TouchableOpacity style={styles.eraseKey} onPress={() => handleNumberPress(0)}>
-          <Text style={styles.eraseText}>⌫</Text>
+        <TouchableOpacity style={[styles.numButton, styles.eraseButton]} onPress={() => handleNumberInput(0)}>
+          <Text style={styles.eraseText}>✕</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -117,119 +98,23 @@ export default function GameScreen({ onLogout }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    width: BOARD_SIZE,
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    letterSpacing: 3,
-    color: '#212529',
-  },
-  logoutButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    backgroundColor: '#dc3545',
-    borderRadius: 6,
-  },
-  logoutText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  board: {
-    width: BOARD_SIZE,
-    height: BOARD_SIZE,
-    borderWidth: 2,
-    borderColor: '#343a40',
-    backgroundColor: '#ffffff',
-  },
-  row: {
-    flexDirection: 'row',
-  },
-  cell: {
-    width: CELL_SIZE,
-    height: CELL_SIZE,
-    borderWidth: 0.5,
-    borderColor: '#ced4da',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  highlightedRowCol: {
-    backgroundColor: '#f1f3f5',
-  },
-  sameValueCell: {
-    backgroundColor: '#d0ebff',
-  },
-  selectedCell: {
-    backgroundColor: '#a5d8ff',
-  },
-  invalidCell: {
-    backgroundColor: '#ffc9c9',
-  },
-  borderBottom: {
-    borderBottomWidth: 2,
-    borderBottomColor: '#343a40',
-  },
-  borderRight: {
-    borderRightWidth: 2,
-    borderRightColor: '#343a40',
-  },
-  cellText: {
-    fontSize: 20,
-    color: '#1971c2',
-    fontWeight: '500',
-  },
-  initialText: {
-    color: '#212529',
-    fontWeight: 'bold',
-  },
-  invalidText: {
-    color: '#e03131',
-  },
-  keypad: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    marginTop: 30,
-    width: BOARD_SIZE,
-  },
-  key: {
-    width: CELL_SIZE * 1.2,
-    height: CELL_SIZE * 1.2,
-    backgroundColor: '#e9ecef',
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    margin: 4,
-  },
-  keyText: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#495057',
-  },
-  eraseKey: {
-    width: CELL_SIZE * 1.2,
-    height: CELL_SIZE * 1.2,
-    backgroundColor: '#ffe066',
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    margin: 4,
-  },
-  eraseText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#212529',
-  },
+  container: { flex: 1, backgroundColor: '#f8f9fa', alignItems: 'center', justifyContent: 'space-around', paddingVertical: 20 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', width: '90%', backgroundColor: '#fff', padding: 16, borderRadius: 12, elevation: 2 },
+  infoBox: { alignItems: 'center' },
+  infoLabel: { fontSize: 12, color: '#6c757d' },
+  infoValue: { fontSize: 16, fontWeight: 'bold', color: '#212529', marginTop: 2 },
+  board: { width: 340, height: 340, backgroundColor: '#212529', borderWidth: 2, borderColor: '#212529', borderRadius: 4 },
+  row: { flex: 1, flexDirection: 'row' },
+  cell: { flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', borderWidth: 0.5, borderColor: '#dee2e6' },
+  borderRight: { borderRightWidth: 2, borderRightColor: '#212529' },
+  borderBottom: { borderBottomWidth: 2, borderBottomColor: '#212529' },
+  selectedCell: { backgroundColor: '#e2e3e5' },
+  cellText: { fontSize: 20, fontWeight: '600' },
+  initialText: { color: '#000', fontWeight: 'bold' },
+  userText: { color: '#0d6efd' },
+  numpad: { flexDirection: 'row', flexWrap: 'wrap', width: '90%', justifyContent: 'center', gap: 8 },
+  numButton: { width: 55, height: 55, backgroundColor: '#fff', borderRadius: 12, justifyContent: 'center', alignItems: 'center', elevation: 2 },
+  numButtonText: { fontSize: 22, color: '#0d6efd', fontWeight: 'bold' },
+  eraseButton: { backgroundColor: '#f8d7da' },
+  eraseText: { fontSize: 20, color: '#dc3545', fontWeight: 'bold' },
 });

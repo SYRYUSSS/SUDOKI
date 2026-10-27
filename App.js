@@ -1,75 +1,84 @@
 import React, { useState, useEffect } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { getAccessToken } from './src/services/api';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import GameScreen from './src/screens/GameScreen';
-import { getAccessToken, logout } from './src/services/api';
+import ProfileScreen from './src/screens/ProfileScreen';
 
 export default function App() {
-  const [currentScreen, setCurrentScreen] = useState('login'); // 'login' | 'register' | 'game'
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('game'); // 'game' | 'profile'
 
-  // Проверка сохраненной сессии при старте
   useEffect(() => {
-    checkAuthStatus();
+    checkAuth();
   }, []);
 
-  const checkAuthStatus = async () => {
-    try {
-      const token = await getAccessToken();
-      if (token) {
-        setCurrentScreen('game');
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
+  const checkAuth = async () => {
+    const token = await getAccessToken();
+    if (token) {
+      setIsAuthenticated(true);
     }
-  };
-
-  const handleLogout = async () => {
-    await logout();
-    setCurrentScreen('login');
+    setLoading(false);
   };
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={styles.centered}>
         <ActivityIndicator size="large" color="#0d6efd" />
       </View>
     );
   }
 
+  if (!isAuthenticated) {
+    return isRegistering ? (
+      <RegisterScreen switchToLogin={() => setIsRegistering(false)} />
+    ) : (
+      <LoginScreen
+        onLoginSuccess={() => setIsAuthenticated(true)}
+        switchToRegister={() => setIsRegistering(true)}
+      />
+    );
+  }
+
   return (
     <View style={styles.container}>
-      {currentScreen === 'login' && (
-        <LoginScreen
-          onLoginSuccess={() => setCurrentScreen('game')}
-          switchToRegister={() => setCurrentScreen('register')}
-        />
-      )}
+      <View style={styles.content}>
+        {activeTab === 'game' ? (
+          <GameScreen />
+        ) : (
+          <ProfileScreen onLogout={() => setIsAuthenticated(false)} />
+        )}
+      </View>
 
-      {currentScreen === 'register' && (
-        <RegisterScreen
-          switchToLogin={() => setCurrentScreen('login')}
-        />
-      )}
-
-      {currentScreen === 'game' && (
-        <GameScreen onLogout={handleLogout} />
-      )}
+      {/* Простая навигационная панель снизу (Bottom Navigation) */}
+      <View style={styles.navbar}>
+        <TouchableOpacity
+          style={[styles.navButton, activeTab === 'game' && styles.navActive]}
+          onPress={() => setActiveTab('game')}
+        >
+          <Text style={[styles.navText, activeTab === 'game' && styles.navTextActive]}>🎮 Игра</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.navButton, activeTab === 'profile' && styles.navActive]}
+          onPress={() => setActiveTab('profile')}
+        >
+          <Text style={[styles.navText, activeTab === 'profile' && styles.navTextActive]}>👤 Профиль</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  container: { flex: 1, backgroundColor: '#fff' },
+  content: { flex: 1 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  navbar: { flexDirection: 'row', height: 60, borderTopWidth: 1, borderTopColor: '#dee2e6', backgroundColor: '#fff' },
+  navButton: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  navActive: { borderTopWidth: 3, borderTopColor: '#0d6efd' },
+  navText: { fontSize: 16, color: '#6c757d' },
+  navTextActive: { color: '#0d6efd', fontWeight: 'bold' },
 });
